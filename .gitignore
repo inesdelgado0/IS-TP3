@@ -1,3 +1,6 @@
+# Documentos
+*.pdf
+*.docx
 
 .env
 *.env

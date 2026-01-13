@@ -112,8 +112,8 @@ func (x *Resultado) GetValor() float32 {
 type MarcaStats struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Total         int32                  `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
-	MediaPreco    float32                `protobuf:"fixed32,2,opt,name=media_preco,json=mediaPreco,proto3" json:"media_preco,omitempty"`
-	MediaKms      float32                `protobuf:"fixed32,3,opt,name=media_kms,json=mediaKms,proto3" json:"media_kms,omitempty"`
+	MediaPreco    float32                `protobuf:"fixed32,2,opt,name=media_preco,json=mediaPreco,proto3" json:"media_preco,omitempty"` // O Go vai ler isto como MediaPreco
+	MediaKms      float32                `protobuf:"fixed32,3,opt,name=media_kms,json=mediaKms,proto3" json:"media_kms,omitempty"`       // O Go vai ler isto como MediaKms
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

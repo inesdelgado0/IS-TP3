@@ -5,13 +5,8 @@ package comunicacao;
 option go_package = "./pb";
 
 service BIQueryService {
-  // 1. Saúde do Inventário (Preço e Kms médios por marca)
   rpc GetMarcaStats (Filtro) returns (MarcaStats);
-  
-  // 2. Mix de Produto (Contagem por categoria: SUV, Carrinha, etc)
   rpc GetContagemSegmento (Filtro) returns (Resultado);
-  
-  // 3. Distribuição Geográfica (Total de carros e valor de stock por cidade)
   rpc GetLocalizacaoStats (Filtro) returns (LocalizacaoStats);
 }
 
@@ -25,8 +20,8 @@ message Resultado {
 
 message MarcaStats {
   int32 total = 1;
-  float media_preco = 2;
-  float media_kms = 3;
+  float media_preco = 2; // O Go vai ler isto como MediaPreco
+  float media_kms = 3;   // O Go vai ler isto como MediaKms
 }
 
 message LocalizacaoStats {

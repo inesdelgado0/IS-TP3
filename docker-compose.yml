@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # Serviço XML (Go)
+  xml-service:
+    build: ./xml-service
+    container_name: xml-service
+    ports:
+      - "8080:8080"   # Porta para o Processor enviar CSV
+      - "50051:50051" # Porta para o BI Service pedir dados via gRPC
+    env_file: 
+      - ./xml-service/.env
+    restart: always
+
+  # Serviço BI (Python)
+  bi-service:
+    build: ./bi-service
+    container_name: bi-service
+    ports:
+      - "5000:5000"   # Porta para tu abrires o GraphQL no Browser
+    depends_on:
+      - xml-service
+    environment:
+      # Dizemos ao Python para procurar o host "xml-service" em vez de "localhost"
+      - GRPC_HOST=xml-service
+    restart: always

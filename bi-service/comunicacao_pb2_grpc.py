@@ -55,22 +55,19 @@ class BIQueryServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def GetMarcaStats(self, request, context):
-        """1. Saúde do Inventário (Preço e Kms médios por marca)
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def GetContagemSegmento(self, request, context):
-        """2. Mix de Produto (Contagem por categoria: SUV, Carrinha, etc)
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def GetLocalizacaoStats(self, request, context):
-        """3. Distribuição Geográfica (Total de carros e valor de stock por cidade)
-        """
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')

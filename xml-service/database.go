@@ -2,74 +2,125 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 	"time"
+
 	_ "github.com/lib/pq"
 )
 
 func ConnectDB() *sql.DB {
-	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
+	connStr := os.Getenv("DATABASE_URL")
+	db, err := sql.Open("postgres", connStr)
 	if err != nil {
-		log.Fatal("Erro ao ligar ao SupaBase:", err)
+		log.Fatal("Erro na configuração da base de dados:", err)
 	}
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("\nNão foi possível ligar ao PostgreSQL. Verifica o .env: ", err)
+	}
+
+	fmt.Println("\nConectado ao PostgreSQL com sucesso!")
 	return db
 }
 
-func SaveXML(db *sql.DB, xmlDoc string, mapperVer string) {
+// SaveXML persiste o documento na tabela conforme o Requisito 13
+func SaveXML(db *sql.DB, xmlDoc string, mapperVer string) error {
 	query := `INSERT INTO veiculos_xml (xml_documento, data_criacao, mapper_version) VALUES ($1, $2, $3)`
 	_, err := db.Exec(query, xmlDoc, time.Now(), mapperVer)
 	if err != nil {
-		log.Println("ERRO NO SUPABASE:", err)
-	} else {
-		log.Println("XML INSERIDO NO SUPABASE")
+		log.Println("Erro ao inserir XML:", err)
+		return err
 	}
+	log.Println("XML guardado na base de dados local.")
+	return nil
 }
 
-// 1. Stats por Marca (Média de Preço e KMS)
+// 1. Stats por Marca (Deduplicado por IDInterno)
 func GetMarcaStatsXPath(db *sql.DB, marca string) (int32, float32, float32) {
 	var total int32
 	var mPreco, mKms sql.NullFloat64
 
 	query := `
+		WITH v_table AS (
+			SELECT 
+				unnest(xpath('/RelatorioVeiculos/Stock/Veiculo/@IDInterno', xml_documento))::text as id_interno,
+				unnest(xpath('/RelatorioVeiculos/Stock/Veiculo/Identificacao/Designacao/text()', xml_documento))::text as designacao,
+				unnest(xpath('/RelatorioVeiculos/Stock/Veiculo/Identificacao/Preco/text()', xml_documento))::text::numeric as preco,
+				unnest(xpath('/RelatorioVeiculos/Stock/Veiculo/HistoricoUso/Kilometragem/text()', xml_documento))::text::numeric as kms
+			FROM veiculos_xml
+		),
+		deduplicated AS (
+			-- DISTINCT ON garante que se o mesmo IDInterno aparecer em vários XMLs, só contamos uma vez
+			SELECT DISTINCT ON (id_interno) id_interno, designacao, preco, kms
+			FROM v_table
+			WHERE designacao ILIKE $1
+		)
 		SELECT 
 			COUNT(*),
-			AVG(CAST((xpath('/Veiculo/Identificacao/PrecoVenda/text()', xml_documento))[1] AS TEXT)::NUMERIC),
-			AVG(CAST((xpath('/Veiculo/DetalhesTecnicos/HistoricoUso/Kilometragem/text()', xml_documento))[1] AS TEXT)::NUMERIC)
-		FROM veiculos_xml
-		WHERE CAST((xpath('/Veiculo/Identificacao/Designacao/text()', xml_documento))[1] AS TEXT) ILIKE $1`
-
+			COALESCE(AVG(preco), 0),
+			COALESCE(AVG(kms), 0)
+		FROM deduplicated`
+	
 	err := db.QueryRow(query, "%"+marca+"%").Scan(&total, &mPreco, &mKms)
 	if err != nil {
+		log.Println("Erro XPath Marca:", err)
 		return 0, 0, 0
 	}
 	return total, float32(mPreco.Float64), float32(mKms.Float64)
 }
 
-// 2. Contagem por Segmento (Categoria)
+// 2. Contagem por Segmento (Deduplicado por IDInterno)
 func GetCountSegmentoXPath(db *sql.DB, segmento string) int32 {
 	var total int32
 	query := `
-		SELECT COUNT(*)
-		FROM veiculos_xml
-		WHERE CAST((xpath('/Veiculo/Identificacao/CategoriaVeiculo/text()', xml_documento))[1] AS TEXT) ILIKE $1`
+		WITH v_table AS (
+			SELECT 
+				unnest(xpath('/RelatorioVeiculos/Stock/Veiculo/@IDInterno', xml_documento))::text as id_interno,
+				unnest(xpath('/RelatorioVeiculos/Stock/Veiculo/Identificacao/Categoria/text()', xml_documento))::text as cat
+			FROM veiculos_xml
+		)
+		SELECT COUNT(DISTINCT id_interno) 
+		FROM v_table 
+		WHERE cat ILIKE $1`
 	
-	db.QueryRow(query, "%"+segmento+"%").Scan(&total)
+	err := db.QueryRow(query, "%"+segmento+"%").Scan(&total)
+	if err != nil {
+		log.Println("Erro XPath Segmento:", err)
+		return 0
+	}
 	return total
 }
 
-// 3. Stats por Localização (Cidade)
+// 3. Stats por Localização (Deduplicado por IDInterno)
 func GetLocalizacaoStatsXPath(db *sql.DB, cidade string) (int32, float32) {
 	var total int32
 	var valorTotal sql.NullFloat64
 
 	query := `
+		WITH v_table AS (
+			SELECT 
+				unnest(xpath('/RelatorioVeiculos/Stock/Veiculo/@IDInterno', xml_documento))::text as id_interno,
+				unnest(xpath('/RelatorioVeiculos/Stock/Veiculo/Geografia/Cidade/text()', xml_documento))::text as cidade_nome,
+				unnest(xpath('/RelatorioVeiculos/Stock/Veiculo/Identificacao/Preco/text()', xml_documento))::text::numeric as preco
+			FROM veiculos_xml
+		),
+		deduplicated AS (
+			SELECT DISTINCT ON (id_interno) id_interno, cidade_nome, preco
+			FROM v_table
+			WHERE cidade_nome ILIKE $1
+		)
 		SELECT 
 			COUNT(*),
-			SUM(CAST((xpath('/Veiculo/Identificacao/PrecoVenda/text()', xml_documento))[1] AS TEXT)::NUMERIC)
-		FROM veiculos_xml
-		WHERE CAST((xpath('/Veiculo/Geografia/Cidade/text()', xml_documento))[1] AS TEXT) ILIKE $1`
+			COALESCE(SUM(preco), 0)
+		FROM deduplicated`
 
-	db.QueryRow(query, "%"+cidade+"%").Scan(&total, &valorTotal)
+	err := db.QueryRow(query, "%"+cidade+"%").Scan(&total, &valorTotal)
+	if err != nil {
+		log.Println("Erro XPath Localidade:", err)
+		return 0, 0
+	}
 	return total, float32(valorTotal.Float64)
 }

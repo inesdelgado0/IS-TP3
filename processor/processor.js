@@ -15,22 +15,26 @@ const PORT_WEBHOOK = 3000;
 let isProcessing = false;
 
 const MAPPER_CONFIG = {
-    version: "1.0",
-    mapping: {
-        "marca_modelo": "Designacao",
-        "preco_eur": "Preco",
-        "ano": "Ano",
-        "quilometros": "Quilometros",
-        "combustivel": "Combustivel",
-        "localidade": "Cidade",
-        "cilindrada": "Cilindrada",
-        "potencia": "Potencia",
-        "caixa": "Transmissao",
-        "segmento": "Categoria",
-        "lat": "Latitude",  
-        "lon": "Longitude" 
-    }
+    version: "1.0"
 };
+
+function aplicarMapper(dadosOriginais, coords) {
+    return {
+        "Identificador": dadosOriginais.id_externo || "N/A", 
+        "Designacao": dadosOriginais.marca_modelo || "N/A",
+        "Preco": dadosOriginais.preco_eur || "0",
+        "Ano": dadosOriginais.ano || "0",
+        "Kilometragem": dadosOriginais.quilometros || "0",
+        "TipoCombustivel": dadosOriginais.combustivel || "N/A",
+        "Cidade": dadosOriginais.localidade || "N/A",
+        "Cilindrada": dadosOriginais.cilindrada || "0",
+        "PotenciaMotor": dadosOriginais.potencia || "0",
+        "TipoTransmissao": dadosOriginais.caixa || "N/A",
+        "CategoriaVeiculo": dadosOriginais.segmento || "N/A",
+        "Latitude": coords.lat,
+        "Longitude": coords.lon
+    };
+}
 
 async function getGPS(localidade) {
     if (!localidade || localidade === "N/A") return { lat: "0.0", lon: "0.0" };
@@ -46,23 +50,6 @@ async function getGPS(localidade) {
     return { lat: "0.0", lon: "0.0" };
 }
 
-function aplicarMapper(dadosOriginais, coords) {
-    // Definimos exatamente a ordem que queremos que apareça no CSV
-    return {
-        "Designacao": dadosOriginais.marca_modelo || "N/A",
-        "Preco": dadosOriginais.preco_eur || "0",
-        "Ano": dadosOriginais.ano || "0",
-        "Kilometragem": dadosOriginais.quilometros || "0",
-        "FonteEnergia": dadosOriginais.combustivel || "N/A",
-        "Cidade": dadosOriginais.localidade || "N/A",
-        "CilindradaCC": dadosOriginais.cilindrada || "0",
-        "PotenciaMotor": dadosOriginais.potencia || "0",
-        "TipoTransmissao": dadosOriginais.caixa || "N/A",
-        "CategoriaVeiculo": dadosOriginais.segmento || "N/A",
-        "Latitude": coords.lat, // Será o índice 10
-        "Longitude": coords.lon // Será o índice 11
-    };
-}
 
 async function enviarParaXMLService(dados, mapperVersion, fileName) {
     try {
@@ -96,7 +83,7 @@ async function enviarParaXMLService(dados, mapperVersion, fileName) {
         form.append('requestId', `REQ-${Date.now()}`);
         form.append('mapper', mapperVersion);
         form.append('fileName', fileName);
-        form.append('webhookUrl', `http://localhost:${PORT_WEBHOOK}/webhook`);
+        form.append('webhookUrl', `http://host.docker.internal:${PORT_WEBHOOK}/webhook`);
         form.append('csvFile', buffer, { filename: fileName, contentType: 'text/csv' });
 
         console.log(`\n> Enviando ${dados.length} linhas para o Go...`);
@@ -140,8 +127,6 @@ async function processFile(fileName) {
                 console.log("\nTransformação concluída.");
                 await enviarParaXMLService(dadosProntos, MAPPER_CONFIG.version, fileName);
                 
-                // NOTA: isProcessing só volta a false quando o Webhook apagar o ficheiro
-                // ou se quiseres processar outro logo a seguir, podes pôr isProcessing = false aqui:
                 isProcessing = false; 
             });
     } catch (err) {
@@ -151,16 +136,22 @@ async function processFile(fileName) {
 }
 
 async function pollingBucket() {
-    if (isProcessing) return; // Não verifica se estiver ocupado
+    if (isProcessing) return; // Se já está a processar um, não faz nada agora
+    
     console.log("\nPolling: A verificar ficheiros na Supabase...");
     const { data, error } = await supabase.storage.from(BUCKET_NAME).list();
-    if (error) return;
+    if (error || !data) return;
 
-    const files = data.filter(f => f.name.startsWith('carros_'))
-                      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    // Filtramos e ordenamos: o mais antigo (criado há mais tempo) aparece primeiro
+    const files = data
+        .filter(f => f.name.startsWith('carros_'))
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
     if (files.length > 0) {
+        // Pega no primeiro (o mais antigo da fila)
         await processFile(files[0].name);
+    } else {
+        console.log("Nenhum ficheiro pendente no bucket.");
     }
 }
 
@@ -179,10 +170,8 @@ app.post('/webhook', async (req, res) => {
 
 
 app.listen(PORT_WEBHOOK, () => {
-    // 1. Primeiro imprime que o servidor está pronto
     console.log(`\nServidor Webhook a correr na porta ${PORT_WEBHOOK}`);
     
-    // 2. Só agora, com o servidor ligado, inicia o primeiro Polling
     pollingBucket();
 });
 

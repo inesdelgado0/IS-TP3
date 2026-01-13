@@ -28,11 +28,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BIQueryServiceClient interface {
-	// 1. Saúde do Inventário (Preço e Kms médios por marca)
 	GetMarcaStats(ctx context.Context, in *Filtro, opts ...grpc.CallOption) (*MarcaStats, error)
-	// 2. Mix de Produto (Contagem por categoria: SUV, Carrinha, etc)
 	GetContagemSegmento(ctx context.Context, in *Filtro, opts ...grpc.CallOption) (*Resultado, error)
-	// 3. Distribuição Geográfica (Total de carros e valor de stock por cidade)
 	GetLocalizacaoStats(ctx context.Context, in *Filtro, opts ...grpc.CallOption) (*LocalizacaoStats, error)
 }
 
@@ -78,11 +75,8 @@ func (c *bIQueryServiceClient) GetLocalizacaoStats(ctx context.Context, in *Filt
 // All implementations must embed UnimplementedBIQueryServiceServer
 // for forward compatibility.
 type BIQueryServiceServer interface {
-	// 1. Saúde do Inventário (Preço e Kms médios por marca)
 	GetMarcaStats(context.Context, *Filtro) (*MarcaStats, error)
-	// 2. Mix de Produto (Contagem por categoria: SUV, Carrinha, etc)
 	GetContagemSegmento(context.Context, *Filtro) (*Resultado, error)
-	// 3. Distribuição Geográfica (Total de carros e valor de stock por cidade)
 	GetLocalizacaoStats(context.Context, *Filtro) (*LocalizacaoStats, error)
 	mustEmbedUnimplementedBIQueryServiceServer()
 }
