@@ -26,7 +26,7 @@ func ConnectDB() *sql.DB {
 	return db
 }
 
-// SaveXML persiste o documento na tabela conforme o Requisito 13
+
 func SaveXML(db *sql.DB, xmlDoc string, mapperVer string) error {
 	query := `INSERT INTO veiculos_xml (xml_documento, data_criacao, mapper_version) VALUES ($1, $2, $3)`
 	_, err := db.Exec(query, xmlDoc, time.Now(), mapperVer)
@@ -38,7 +38,7 @@ func SaveXML(db *sql.DB, xmlDoc string, mapperVer string) error {
 	return nil
 }
 
-// 1. Stats por Marca (Deduplicado por IDInterno)
+
 func GetMarcaStatsXPath(db *sql.DB, marca string) (int32, float32, float32) {
 	var total int32
 	var mPreco, mKms sql.NullFloat64
@@ -72,7 +72,7 @@ func GetMarcaStatsXPath(db *sql.DB, marca string) (int32, float32, float32) {
 	return total, float32(mPreco.Float64), float32(mKms.Float64)
 }
 
-// 2. Contagem por Segmento (Deduplicado por IDInterno)
+
 func GetCountSegmentoXPath(db *sql.DB, segmento string) int32 {
 	var total int32
 	query := `
@@ -94,7 +94,7 @@ func GetCountSegmentoXPath(db *sql.DB, segmento string) int32 {
 	return total
 }
 
-// 3. Stats por Localização (Deduplicado por IDInterno)
+
 func GetLocalizacaoStatsXPath(db *sql.DB, cidade string) (int32, float32) {
 	var total int32
 	var valorTotal sql.NullFloat64

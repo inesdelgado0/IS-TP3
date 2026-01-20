@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="RelatorioVeiculos">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Configuracao">
+          <xs:complexType>
+            <xs:simpleContent>
+              <xs:extension base="xs:string">
+                <xs:attribute name="ValidadoPor" type="xs:string" use="required"/>
+                <xs:attribute name="Requisitante" type="xs:string" use="required"/>
+              </xs:extension>
+            </xs:simpleContent>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="Stock">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="Veiculo" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="Identificacao">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="Designacao" type="xs:string"/>
+                          <xs:element name="Preco" type="xs:decimal"/>
+                          <xs:element name="Ano" type="xs:integer"/>
+                          <xs:element name="Categoria" type="xs:string"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="DetalhesTecnicos">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="Cilindrada" type="xs:integer"/>
+                          <xs:element name="PotenciaMotor" type="xs:integer"/>
+                          <xs:element name="TipoCombustivel" type="xs:string"/>
+                          <xs:element name="TipoTransmissao" type="xs:string"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="HistoricoUso">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="Kilometragem" type="xs:integer"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="Geografia">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="Cidade" type="xs:string"/>
+                          <xs:element name="PosicionamentoGPS">
+                            <xs:complexType>
+                              <xs:simpleContent>
+                                <xs:extension base="xs:string">
+                                  <xs:attribute name="Lat" type="xs:decimal" use="required"/>
+                                  <xs:attribute name="Lon" type="xs:decimal" use="required"/>
+                                </xs:extension>
+                              </xs:simpleContent>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="IDInterno" type="xs:string" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="DataGeracao" type="xs:string"/>
+      <xs:attribute name="Versao" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

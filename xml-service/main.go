@@ -13,10 +13,11 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-
 	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"xml-service/pb"
+	"github.com/lestrrat-go/libxml2"
+    "github.com/lestrrat-go/libxml2/xsd"
 )
 
 
@@ -25,7 +26,7 @@ type server struct {
 	db *sql.DB
 }
 
-// Implementações gRPC (Requisito 14 - XPath)
+
 func (s *server) GetMarcaStats(ctx context.Context, in *pb.Filtro) (*pb.MarcaStats, error) {
 	total, preco, kms := GetMarcaStatsXPath(s.db, in.GetTermo())
 	return &pb.MarcaStats{Total: total, MediaPreco: preco, MediaKms: kms}, nil
@@ -52,16 +53,27 @@ func callWebhook(url string, reqID string, status string, fileName string) {
 	fmt.Printf(">\nWebhook avisado [%s]: %s\n", status, fileName)
 }
 
-// --- NOVO: Função de Validação (Requisito 3) ---
-func validar(lista ListaVeiculos) (bool, string) {
-	if len(lista.Stock) == 0 {
-		return false, "ERRO_VALIDACAO: Ficheiro sem veículos para processar"
+
+func validarComXSD(xmlString string) (bool, string) {
+	// 1. Parse do XSD (garante que o ficheiro schema.xsd está na pasta)
+	schema, err := xsd.ParseFromFile("schema.xsd")
+	if err != nil {
+		return false, "ERRO_SISTEMA: Falha ao carregar XSD"
 	}
-	for _, v := range lista.Stock {
-		if v.Identificador == "" || v.Identificacao.Preco <= 0 {
-			return false, "ERRO_VALIDACAO: Dados obrigatórios (ID/Preço) inválidos ou ausentes"
-		}
+	defer schema.Free()
+
+	// 2. Parse do XML gerado
+	doc, err := libxml2.ParseString(xmlString)
+	if err != nil {
+		return false, "ERRO_XML: XML mal formatado"
 	}
+	defer doc.Free()
+
+	// 3. Validação real
+	if err := schema.Validate(doc); err != nil {
+		return false, "ERRO_XSD: " + err.Error()
+	}
+
 	return true, "SUCCESS"
 }
 
@@ -145,12 +157,23 @@ func main() {
 			// Validação e Persistência
 			ok, status := validar(relatorio)
 			if ok {
+				// 2. Gerar o XML
 				xmlBytes, _ := xml.MarshalIndent(relatorio, "", "  ")
 				xmlFinal := string(xml.Header) + string(xmlBytes)
 
-				err := SaveXML(db, xmlFinal, mVer)
-				if err != nil {
-					status = "ERRO_PERSISTENCIA"
+				// 3. Validação XSD (O "Segurança" do contrato)
+				xsdOk, xsdMsg := validarComXSD(xmlFinal)
+				if !xsdOk {
+					status = xsdMsg
+					log.Println("Rejeitado pelo XSD:", xsdMsg)
+				} else {
+					// 4. Só persiste se passar no XSD
+					err := SaveXML(db, xmlFinal, mVer)
+					if err != nil {
+						status = "ERRO_PERSISTENCIA"
+					} else {
+						status = "SUCCESS"
+					}
 				}
 			}
 
