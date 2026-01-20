@@ -52,6 +52,6 @@ app.add_url_rule(
     view_func=GraphQLView.as_view('graphql', schema=schema, graphiql=True)
 )
 
-if __name__ == '__main__':
-    # No Docker, o Flask precisa de correr em 0.0.0.0 para ser visível fora do contentor
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", "5000"))
+    app.run(host="0.0.0.0", port=port)
