@@ -53,6 +53,12 @@ func callWebhook(url string, reqID string, status string, fileName string) {
 	fmt.Printf(">\nWebhook avisado [%s]: %s\n", status, fileName)
 }
 
+func validar(lista ListaVeiculos) (bool, string) {
+    if len(lista.Stock) == 0 {
+        return false, "ERRO_NEGOCIO: Lista de veículos vazia"
+    }
+    return true, "SUCCESS"
+}
 
 func validarComXSD(xmlString string) (bool, string) {
 	// 1. Parse do XSD (garante que o ficheiro schema.xsd está na pasta)

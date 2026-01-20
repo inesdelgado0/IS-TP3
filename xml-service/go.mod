@@ -1,15 +1,17 @@
 module xml-service
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/joho/godotenv v1.5.1
+	github.com/lestrrat-go/libxml2 v0.0.0-20240905100032-c934e3fcb9d3
 	github.com/lib/pq v1.10.9
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
 )
 
 require (
+	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect

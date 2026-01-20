@@ -16,8 +16,8 @@ type ListaVeiculos struct {
 
 	// Metadata do processo (Requisito de rastreabilidade)
 	Configuracao struct {
-		ValidadoPor string `xml:"ValidadoPor, attr"` // XML_Service
-		Requisitante string `xml:"Requisitante, attr"` // ID da Transação do Node
+		ValidadoPor string `xml:"ValidadoPor,attr"` // XML_Service
+		Requisitante string `xml:"Requisitante,attr"` // ID da Transação do Node
 	} `xml:"Configuracao"`
 
 	// Onde os carros realmente entram
